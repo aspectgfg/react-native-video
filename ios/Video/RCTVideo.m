@@ -350,6 +350,17 @@ static int const RCTVideoUnset = -1;
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t) 0), dispatch_get_main_queue(), ^{
 
     // perform on next run loop, otherwise other passed react-props may not be set
+      [self prepare];
+    
+  });
+  _videoLoadStarted = YES;
+}
+
+- (void)prepare {
+    NSDictionary *source = _source;
+    if (!source) {
+        return;
+    }
     [self playerItemForSource:source withCallback:^(AVPlayerItem * playerItem) {
       _playerItem = playerItem;
       [self addPlayerItemObservers];
@@ -393,8 +404,6 @@ static int const RCTVideoUnset = -1;
                                 });
       }
     }];
-  });
-  _videoLoadStarted = YES;
 }
 
 - (NSURL*) urlFilePath:(NSString*) filepath {
@@ -1495,33 +1504,49 @@ static int const RCTVideoUnset = -1;
 
 - (void)removeFromSuperview
 {
-  [_player pause];
-  if (_playbackRateObserverRegistered) {
-    [_player removeObserver:self forKeyPath:playbackRate context:nil];
-    _playbackRateObserverRegistered = NO;
-  }
-  if (_isExternalPlaybackActiveObserverRegistered) {
-    [_player removeObserver:self forKeyPath:externalPlaybackActive context:nil];
-    _isExternalPlaybackActiveObserverRegistered = NO;
-  }
-  _player = nil;
-  
-  [self removePlayerLayer];
-  
-  [_playerViewController.contentOverlayView removeObserver:self forKeyPath:@"frame"];
-  [_playerViewController removeObserver:self forKeyPath:readyForDisplayKeyPath];
-  [_playerViewController.view removeFromSuperview];
-  _playerViewController.rctDelegate = nil;
-  _playerViewController.player = nil;
-  _playerViewController = nil;
-  
-  [self removePlayerTimeObserver];
-  [self removePlayerItemObservers];
-  
-  _eventDispatcher = nil;
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self cleanup];
   
   [super removeFromSuperview];
+}
+
+- (void)cleanup {
+    [_player pause];
+    if (_playbackRateObserverRegistered) {
+      [_player removeObserver:self forKeyPath:playbackRate context:nil];
+      _playbackRateObserverRegistered = NO;
+    }
+    if (_isExternalPlaybackActiveObserverRegistered) {
+      [_player removeObserver:self forKeyPath:externalPlaybackActive context:nil];
+      _isExternalPlaybackActiveObserverRegistered = NO;
+    }
+    _player = nil;
+    
+    [self removePlayerLayer];
+    
+    [_playerViewController.contentOverlayView removeObserver:self forKeyPath:@"frame"];
+    [_playerViewController removeObserver:self forKeyPath:readyForDisplayKeyPath];
+    [_playerViewController.view removeFromSuperview];
+    _playerViewController.rctDelegate = nil;
+    _playerViewController.player = nil;
+    _playerViewController = nil;
+    
+    [self removePlayerTimeObserver];
+    [self removePlayerItemObservers];
+    
+    _eventDispatcher = nil;
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)didMoveToWindow
+{
+  [super didMoveToWindow];
+  BOOL isVisible = self.superview && self.window;
+  if (isVisible) {
+      [self prepare];
+  } else {
+      [self cleanup];
+    // we are in a background
+  }
 }
 
 #pragma mark - Export
