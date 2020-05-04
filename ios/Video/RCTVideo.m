@@ -361,6 +361,10 @@ static int const RCTVideoUnset = -1;
     if (!source) {
         return;
     }
+    if (_playerItem) {
+      [self removePlayerItemObservers];
+      [self removePlayerItemObserver];
+    }
     [self playerItemForSource:source withCallback:^(AVPlayerItem * playerItem) {
       _playerItem = playerItem;
       [self addPlayerItemObservers];
@@ -1504,6 +1508,7 @@ static int const RCTVideoUnset = -1;
 
 - (void)removeFromSuperview
 {
+    NSLog(@"VIDEO::removeFromSuperview");
     [self cleanup];
   
   [super removeFromSuperview];
@@ -1540,10 +1545,15 @@ static int const RCTVideoUnset = -1;
 - (void)didMoveToWindow
 {
   [super didMoveToWindow];
+    NSLog(@"VIDEO::didMoveToWindow");
   BOOL isVisible = self.superview && self.window;
+    
   if (isVisible) {
       [self prepare];
   } else {
+      if (    [_playerViewController valueForKeyPath:@"_playbackControlsController._playerViewControllerIsBeingTransitionedWithResizing"]) {
+          return;
+      }
       [self cleanup];
     // we are in a background
   }
