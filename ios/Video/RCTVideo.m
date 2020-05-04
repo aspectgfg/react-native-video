@@ -362,52 +362,56 @@ static int const RCTVideoUnset = -1;
         return;
     }
     if (_playerItem) {
-      [self removePlayerItemObservers];
-      [self removePlayerItemObserver];
+        [self removePlayerTimeObserver];
+        [self removePlayerItemObservers];
     }
     [self playerItemForSource:source withCallback:^(AVPlayerItem * playerItem) {
-      _playerItem = playerItem;
-      [self addPlayerItemObservers];
-      [self setFilter:_filterName];
-      [self setMaxBitRate:_maxBitRate];
-      
-      [_player pause];
-        
-      if (_playbackRateObserverRegistered) {
-        [_player removeObserver:self forKeyPath:playbackRate context:nil];
-        _playbackRateObserverRegistered = NO;
-      }
-      if (_isExternalPlaybackActiveObserverRegistered) {
-        [_player removeObserver:self forKeyPath:externalPlaybackActive context:nil];
-        _isExternalPlaybackActiveObserverRegistered = NO;
-      }
-        
-      _player = [AVPlayer playerWithPlayerItem:_playerItem];
-      _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
-        
-      [_player addObserver:self forKeyPath:playbackRate options:0 context:nil];
-      _playbackRateObserverRegistered = YES;
-      
-      [_player addObserver:self forKeyPath:externalPlaybackActive options:0 context:nil];
-      _isExternalPlaybackActiveObserverRegistered = YES;
-        
-      [self addPlayerTimeObserver];
-      if (@available(iOS 10.0, *)) {
-        [self setAutomaticallyWaitsToMinimizeStalling:_automaticallyWaitsToMinimizeStalling];
-      }
-
-      //Perform on next run loop, otherwise onVideoLoadStart is nil
-      if (self.onVideoLoadStart) {
-        id uri = [source objectForKey:@"uri"];
-        id type = [source objectForKey:@"type"];
-        self.onVideoLoadStart(@{@"src": @{
-                                        @"uri": uri ? uri : [NSNull null],
-                                        @"type": type ? type : [NSNull null],
-                                        @"isNetwork": [NSNumber numberWithBool:(bool)[source objectForKey:@"isNetwork"]]},
-                                    @"target": self.reactTag
-                                });
-      }
+        [self onPlayerItem: playerItem withSource:source];
     }];
+}
+
+- (void)onPlayerItem: (AVPlayerItem *)playerItem withSource: (NSDictionary *)source {
+    _playerItem = playerItem;
+    [self addPlayerItemObservers];
+    [self setFilter:_filterName];
+    [self setMaxBitRate:_maxBitRate];
+    
+    [_player pause];
+      
+    if (_playbackRateObserverRegistered) {
+      [_player removeObserver:self forKeyPath:playbackRate context:nil];
+      _playbackRateObserverRegistered = NO;
+    }
+    if (_isExternalPlaybackActiveObserverRegistered) {
+      [_player removeObserver:self forKeyPath:externalPlaybackActive context:nil];
+      _isExternalPlaybackActiveObserverRegistered = NO;
+    }
+      
+    _player = [AVPlayer playerWithPlayerItem:_playerItem];
+    _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
+      
+    [_player addObserver:self forKeyPath:playbackRate options:0 context:nil];
+    _playbackRateObserverRegistered = YES;
+    
+    [_player addObserver:self forKeyPath:externalPlaybackActive options:0 context:nil];
+    _isExternalPlaybackActiveObserverRegistered = YES;
+      
+    [self addPlayerTimeObserver];
+    if (@available(iOS 10.0, *)) {
+      [self setAutomaticallyWaitsToMinimizeStalling:_automaticallyWaitsToMinimizeStalling];
+    }
+
+    //Perform on next run loop, otherwise onVideoLoadStart is nil
+    if (self.onVideoLoadStart) {
+      id uri = [source objectForKey:@"uri"];
+      id type = [source objectForKey:@"type"];
+      self.onVideoLoadStart(@{@"src": @{
+                                      @"uri": uri ? uri : [NSNull null],
+                                      @"type": type ? type : [NSNull null],
+                                      @"isNetwork": [NSNumber numberWithBool:(bool)[source objectForKey:@"isNetwork"]]},
+                                  @"target": self.reactTag
+                              });
+    }
 }
 
 - (NSURL*) urlFilePath:(NSString*) filepath {
