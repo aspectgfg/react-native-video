@@ -3,6 +3,7 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTEventDispatcher.h>
 #import <React/UIView+React.h>
+#import <Photos/Photos.h>
 #include <MediaAccessibility/MediaAccessibility.h>
 #include <AVFoundation/AVFoundation.h>
 
@@ -108,7 +109,7 @@ static int const RCTVideoUnset = -1;
     _playInBackground = false;
     _preferredForwardBufferDuration = 0.0f;
     _allowsExternalPlayback = YES;
-    _playWhenInactive = false;
+    _playWhenInactive = true;
     _pictureInPicture = false;
     _ignoreSilentSwitch = @"inherit"; // inherit, ignore, obey
     _mixWithOthers = @"inherit"; // inherit, mix, duck
@@ -383,7 +384,7 @@ static int const RCTVideoUnset = -1;
     [self setFilter:_filterName];
     [self setMaxBitRate:_maxBitRate];
     
-    [_player pause];
+//    [_player pause];
       
     if (_playbackRateObserverRegistered) {
       [_player removeObserver:self forKeyPath:playbackRate context:nil];
@@ -540,8 +541,17 @@ static int const RCTVideoUnset = -1;
     [self playerItemPrepareText:asset assetOptions:assetOptions withCallback:handler];
     return;
   } else if (isAsset) {
-    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
-    [self playerItemPrepareText:asset assetOptions:assetOptions withCallback:handler];
+    if ([uri hasPrefix:@"assets-library://"]) {
+      NSURL *url = [NSURL URLWithString:uri];
+      AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
+      [self playerItemPrepareText:asset assetOptions:assetOptions withCallback:handler];
+    } else {
+      NSString *assetId = [uri substringFromIndex:@"ph://".length];
+      PHAsset *asset = [[PHAsset fetchAssetsWithLocalIdentifiers:@[assetId] options:nil] firstObject];
+      [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:nil resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
+        [self playerItemPrepareText:asset assetOptions:assetOptions withCallback:handler];
+      }];
+    }
     return;
   }
 
@@ -1307,7 +1317,7 @@ static int const RCTVideoUnset = -1;
     UIViewController *viewController = [self firstAvailableUIViewController];
     if( !viewController )
     {
-      UIWindow *keyWindow = [[UIApplication sharedApplication] keyWindow];
+      UIWindow *keyWindow = [RCTSharedApplication() keyWindow];
       viewController = keyWindow.rootViewController;
       if( viewController.childViewControllers.count > 0 )
       {
