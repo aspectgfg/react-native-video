@@ -541,7 +541,7 @@ static int const RCTVideoUnset = -1;
     [self playerItemPrepareText:asset assetOptions:assetOptions withCallback:handler];
     return;
   } else if (isAsset) {
-    if ([uri hasPrefix:@"assets-library://"]) {
+    if (![uri hasPrefix:@"ph://"]) {
       NSURL *url = [NSURL URLWithString:uri];
       AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
       [self playerItemPrepareText:asset assetOptions:assetOptions withCallback:handler];
